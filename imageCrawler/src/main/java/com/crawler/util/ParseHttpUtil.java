@@ -14,17 +14,15 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
 /**
  * Created by 周黎钢 on 2018/2/9.
  */
-public class ParseHttpUrl {
+public class ParseHttpUtil {
     public static Set<String> extractLinks(String url, Filter filter) {
         Set<String> links = new HashSet<>();
-        links = Collections.synchronizedSet(links);
         try {
             Parser parser = new Parser(url);
             NodeFilter nodeFilter = new NodeFilter() {
@@ -68,30 +66,55 @@ public class ParseHttpUrl {
         return links;
     }
 
-    public static Set<String> extractLinksByJsoup(String url, Filter filter) {
+    /**
+     * 根据需求筛选出页面或者图片的地址集合
+     *
+     * @param url
+     * @param filter
+     * @param need
+     * @return
+     */
+    public static Set<String> extractLinksByJsoup(String url, Filter filter, String need) {
         Set<String> links = new HashSet<>();
-        links = Collections.synchronizedSet(links);
+        Set<String> imageLinks = new HashSet<>();
         Document document = null;
         try {
-            document = Jsoup.connect(url).get();
-            Elements elements = document.select("[href]");
+            document = Jsoup.connect(url)
+                    .header("Accept-Encoding", "gzip, deflate")
+                    .userAgent("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:23.0) Gecko/20100101 Firefox/23.0")
+                    .maxBodySize(0)
+                    .timeout(600000)
+                    .get();
+            ;
+            //获取带有href属性的a元素
+//            document = Jsoup.parse(html, "", org.jsoup.parser.Parser.htmlParser());
+            Elements elements = document.select("a[href]");
             for (Element e : elements) {
                 String link = e.attr("href");
-                if (link != null && filter.acceptHttp(link)) {
+                if (link != null && filter.acceptImage(link)) {
+                    imageLinks.add(link);
+                } else if (link != null && filter.acceptHttp(link)) {
                     links.add(link);
                 }
             }
-            elements = document.select("[src]");
+            //获取带有src属性的img元素
+//            elements = document.select("img[src]");
+            elements=document.getElementsByTag("img");
             for (Element e : elements) {
                 String link = e.attr("src");
-                if (link != null && filter.acceptHttp(link)) {
+                if (link != null && filter.acceptImage(link)) {
+                    imageLinks.add(link);
+                } else if (link != null && filter.acceptHttp(link)) {
                     links.add(link);
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-        return links;
+        if (need.equals("image")) {
+            return imageLinks;
+        } else {
+            return links;
+        }
     }
 }

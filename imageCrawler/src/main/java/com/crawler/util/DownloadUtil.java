@@ -1,19 +1,13 @@
 package com.crawler.util;
 
 import com.crawler.filter.Filter;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 
 import java.io.*;
 import java.net.URL;
 import java.net.URLConnection;
 import java.sql.Timestamp;
-import java.util.Collections;
 import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Set;
 
 /**
  * Created by 周黎钢 on 2018/2/9.
@@ -25,7 +19,7 @@ public class DownloadUtil {
         try {
             URL url1 = new URL(url);
             URLConnection connection = url1.openConnection();
-            BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream(), "utf8"));
+            BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
             String line = null;
             while ((line = in.readLine()) != null) {
                 sb.append(line);
@@ -37,44 +31,14 @@ public class DownloadUtil {
         return sb.toString();
     }
 
-    private static List<String> getImageSrcs(String url) {
-        List<String> imageSrcs = Collections.synchronizedList(new LinkedList<String>());
-//        Document document= Jsoup.parse(url);
-//        Elements elements=document.getElementsByTag("img");
-//        for(Element element:elements){
-//            String imgSrc=element.attr("src");
-//            if (!"".equals(imgSrc) && (imgSrc.startsWith("http://") || imgSrc.startsWith("https://"))) {
-//                imageSrcs.add(imgSrc);
-//            }
-//        }
-        Document document= null;
-        try {
-            document= Jsoup.connect(url).get();
-            Elements elements = document.select("[src]");
-            for(Element element:elements){
-                String imgSrc=element.attr("src");
-                if (!"".equals(imgSrc) && (imgSrc.startsWith("http://") || imgSrc.startsWith("https://"))) {
-                    imageSrcs.add(imgSrc);
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return imageSrcs;
-    }
 
     public static void downloadImages(String urlpage,Filter filter) {
-        if(filter.acceptImage(urlpage)){
-            downloadImage(urlpage);
-            return;
-        }
-//        String html = getHtml(urlpage);
-        List<String> srcs = getImageSrcs(urlpage);
+        Set<String> srcs = ParseHttpUtil.extractLinksByJsoup(urlpage,filter,"image");
         for (String src : srcs) {
             downloadImage(src);
         }
     }
-    public static void downloadImage(String src){
+    private static void downloadImage(String src){
         Date date = new Timestamp(System.currentTimeMillis());
         System.out.println(date);
         InputStream is = null;
